@@ -27,6 +27,7 @@ include "cmp.mc"
 include "anf.mc"
 include "cfa.mc"
 include "const-arity.mc"
+include "const-dep.mc"
 
 lang MCoreCompile
   = OCamlAst
@@ -108,6 +109,7 @@ lang MExprTuning
   + OCamlExtrasANF
   + OCamlExtrasCFA
   + OCamlExtrasConstArity
+  + OCamlExtrasConstDep
   + RepTypesPrettyPrint
 end
 
@@ -131,6 +133,10 @@ let options =
   , debugDesugar = None ()
   , debugRepr = None ()
   , debugAnalysis = None ()
+  , debugColoring = None ()
+  , debugAnf = None ()
+  , debugInstrumentation = None ()
+  , debugExpansion = None ()
   , debugSolverState = false
   , debugFinalSolution = false
   , debugSolveProcess = false
@@ -230,6 +236,22 @@ let argConfig =
     , "Perform tuning and write tuned values to this file."
     , lam p. { p.options with outputTunedValues = Some (argToString p) }
     )
+  , ( [("--debug-coloring", " ", "<path>")]
+    , "Output an interactive (html) pprinted version of the AST just after call graph coloring."
+    , lam p. { p.options with debugColoring = Some (argToString p) }
+    )
+  , ( [("--debug-anf", " ", "<path>")]
+    , "Output an interactive (html) pprinted version of the AST just after ANF transformation."
+    , lam p. { p.options with debugAnf = Some (argToString p) }
+    )
+  , ( [("--debug-instrumentation", " ", "<path>")]
+    , "Output an interactive (html) pprinted version of the AST just after instrumentation."
+    , lam p. { p.options with debugInstrumentation = Some (argToString p) }
+    )
+  , ( [("--debug-expansion", " ", "<path>")]
+    , "Output an interactive (html) pprinted version of the AST just after context expansion."
+    , lam p. { p.options with debugExpansion = Some (argToString p) }
+    )
   ] in
 
 let compile : [String] -> [String] -> Expr -> String -> () =
@@ -253,6 +275,12 @@ let compile : [String] -> [String] -> Expr -> String -> () =
       }
 in
 
+let debugAst : Option String -> Expr -> () = lam s. lam ast.
+  match s with Some path then
+    writeFile path (pprintAst ast)
+  else ()
+in
+
 match
   let res = argParse options argConfig in
   match res with ParseOK res then
@@ -268,23 +296,14 @@ let parseOCamlExn : String -> String -> OFile = parseOCamlExn in
 match parseOCamlExn mlFile (readFile mlFile) with TopsOFile {tops = ast} in
 let ast = ocamlToMExpr ast in
 let ast = wrapInPrelude ast in
-
-(match options.debugMExpr with Some path then
-   writeFile path (pprintAst ast)
- else ());
+debugAst options.debugMExpr ast;
 
 let ast = symbolize ast in
 let ast = typeCheckLeaveMeta ast in
-
-(match options.debugTypeCheck with Some path then
-   writeFile path (pprintAst ast)
- else ());
+debugAst options.debugTypeCheck ast;
 
 let ast = desugarExpr ast in
-
-(match options.debugDesugar with Some path then
-   writeFile path (pprintAst ast)
- else ());
+debugAst options.debugDesugar ast;
 
 let ast = generateUtest options.generateTests ast in
 
@@ -292,9 +311,7 @@ let ast =
   if options.useRepr then
     let ast = use RepAnalysis in typeCheckLeaveMeta ast in
 
-    (match options.debugAnalysis with Some path then
-       writeFile path (pprintAst ast)
-     else ());
+    debugAst options.debugAnalysis ast;
     (match options.jsonPath with Some jsonPath then
        dumpRepTypesProblem jsonPath ast
      else ());
@@ -307,9 +324,7 @@ let ast =
       } in
     let ast = use MExprRepTypesComposedSolver in reprSolve reprOptions ast in
 
-    (match options.debugRepr with Some path then
-       writeFile path (pprintAst ast)
-     else ());
+    debugAst options.debugRepr ast;
     ast
   else ast
 in
@@ -320,7 +335,9 @@ let ast =
       use MExprTuning in
       let table = tuneFileReadTable path in
       let ast = normalizeTerm ast in
+      debugAst options.debugAnf ast;
       match colorCallGraph [] ast with (env, ast) in
+      debugAst options.debugColoring ast;
       insert env table ast
 
     else match options.outputTunedValues with Some path then
@@ -329,7 +346,10 @@ let ast =
         tuneOptionsDefault (optionMapOr "" readFile options.tuneOptions) in
 
       let ast = normalizeTerm ast in
+      debugAst options.debugAnf ast;
+
       match colorCallGraph [] ast with (env, cAst) in
+      debugAst options.debugColoring ast;
 
       match
         if tuneOptions.dependencyAnalysis then
@@ -341,11 +361,12 @@ let ast =
       with (dep, ast) in
 
       match instrument env dep ast with (instRes, ast) in
+      debugAst options.debugInstrumentation ast;
       match contextExpand env ast with (r, ast) in
+      debugAst options.debugExpansion ast;
 
       let ast = stripTuneAnnotations ast in
-      let ast = typeCheckLeaveMeta ast in
-      let ast = removeMetaVarExpr ast in
+      let ast = typeCheck ast in
       let ast = lowerAll ast in
 
       let tuneBinary = sysJoinPath r.tempDir "tune" in
