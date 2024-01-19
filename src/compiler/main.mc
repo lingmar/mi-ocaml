@@ -97,7 +97,8 @@ lang MExprRepTypesComposedSolver
 end
 
 lang MExprTuning
-  = MExprHoles
+  = MCoreCompile
+  + MExprHoles
   + MExprHoleCFA
   + NestedMeasuringPoints
   + DependencyAnalysis
@@ -116,7 +117,7 @@ end
 lang MExprTuneANFAll
   = HoleAst
   + MExprANFAll
-  + OCamlExtrasANF
+  + OCamlExtrasANFAll
 end
 
 mexpr
@@ -254,6 +255,12 @@ let argConfig =
     )
   ] in
 
+let debugAst : Option String -> Expr -> () = lam s. lam ast.
+  match s with Some path then
+    writeFile path (pprintAst ast)
+  else ()
+in
+
 let compile : [String] -> [String] -> Expr -> String -> () =
   lam olibs. lam clibs. lam ast. lam destinationFile.
     compileMCore ast
@@ -273,12 +280,6 @@ let compile : [String] -> [String] -> Expr -> String -> () =
         res.cleanup ();
         ()
       }
-in
-
-let debugAst : Option String -> Expr -> () = lam s. lam ast.
-  match s with Some path then
-    writeFile path (pprintAst ast)
-  else ()
 in
 
 match
