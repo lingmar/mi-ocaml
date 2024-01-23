@@ -516,6 +516,16 @@ lang ConvertAndOExpr = ConvertOCamlToMExpr + AndOExprAst
   | AndOExpr x -> withInfo x.info (if_ (convExpr x.left) (convExpr x.right) false_)
 end
 
+lang ConvertAnnIndepOExpr = ConvertOCamlToMExpr + AnnIndepOExprAst + IndependentAst
+  sem convExpr =
+  | AnnIndepOExpr x -> TmIndependent
+    { lhs = convExpr x.left
+    , rhs = convExpr x.right
+    , info = x.info
+    , ty = tyunknown_
+    }
+end
+
 lang ConvertAccessOExpr = ConvertOCamlToMExpr + AccessOExprAst + ConOExprAst + OpaqueOCamlAst
   sem convExpr =
   | tm & AccessOExpr (x & {module = Some _, field = None _, idx = None _}) ->
@@ -788,6 +798,7 @@ lang ComposedConvertOCamlToMExpr
   + ConvertAddfOExpr
   + ConvertAddiOExpr
   + ConvertAndOExpr
+  + ConvertAnnIndepOExpr
   + ConvertAppOExpr
   + ConvertHoleOExpr
   + ConvertAppOPat

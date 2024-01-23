@@ -136,6 +136,7 @@ let options =
   , debugAnalysis = None ()
   , debugColoring = None ()
   , debugAnf = None ()
+  , debugFullAnf = None ()
   , debugInstrumentation = None ()
   , debugExpansion = None ()
   , debugSolverState = false
@@ -245,6 +246,10 @@ let argConfig =
     , "Output an interactive (html) pprinted version of the AST just after ANF transformation."
     , lam p. { p.options with debugAnf = Some (argToString p) }
     )
+  , ( [("--debug-full-anf", " ", "<path>")]
+    , "Output an interactive (html) pprinted version of the AST just after full ANF transformatio."
+    , lam p. { p.options with debugAnf = Some (argToString p) }
+    )
   , ( [("--debug-instrumentation", " ", "<path>")]
     , "Output an interactive (html) pprinted version of the AST just after instrumentation."
     , lam p. { p.options with debugInstrumentation = Some (argToString p) }
@@ -339,6 +344,7 @@ let ast =
       debugAst options.debugAnf ast;
       match colorCallGraph [] ast with (env, ast) in
       debugAst options.debugColoring ast;
+      let ast = stripTuneAnnotations ast in
       insert env table ast
 
     else match options.outputTunedValues with Some path then
@@ -357,6 +363,13 @@ let ast =
           let ast = use MExprTuneANFAll in normalizeTerm cAst in
           let cfaRes = holeCfa (graphDataInit env) ast in
           let cfaRes = analyzeNested env cfaRes ast in
+
+          debugAst options.debugFullAnf ast;
+          (if tuneOptions.debugDependencyAnalysis then
+             let pprintEnv = (pprintCode 0 pprintEnvEmpty ast).0 in
+             printLn (cfaGraphToString pprintEnv cfaRes).1
+           else ());
+
           (analyzeDependency env cfaRes ast, ast)
         else assumeFullDependency env cAst
       with (dep, ast) in
@@ -379,7 +392,8 @@ let ast =
       r.cleanup();
       instRes.cleanup();
 
-      insert env result cAst
+      let ast = insert env result cAst in
+      stripTuneAnnotations ast
 
     else
       let ast = stripTuneAnnotations ast in

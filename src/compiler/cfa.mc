@@ -29,6 +29,9 @@ lang OCamlListCFA = ConstCFA + OCamlListAst + NestedMeasuringPoints
   sem callGraphEdges im data avLams cur acc =
   | TmApp {lhs = TmApp {lhs = TmConst {val = COCons ()}}} ->
     acc
+
+  sem augmentDependenciesH id im env enc ms mset data eholes g acc =
+  | TmLet {body = TmApp {lhs = TmApp {lhs = TmConst {val = COCons ()}}}} -> acc
 end
 
 lang OCamlExtrasCFA = OCamlStringCFA + OCamlOpaqueCFA + OCamlListCFA

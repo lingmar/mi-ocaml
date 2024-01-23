@@ -195,6 +195,9 @@ infix right Semi : OExpr = ";"
 infix right Or : OExpr = "||"
 infix right And : OExpr = "&&"
 
+-- TODO: add precedence
+infix left AnnIndep : OExpr = "independent_of"
+
 postfix Access : OExpr = "."
   ( field:LIdent
   | module:UName
@@ -214,6 +217,7 @@ precedence {
   Tup;
   If;
   Semi;
+  AnnIndep;
   Let Fun;
 } except {
   Muli Mulf ? Divi Divf;
