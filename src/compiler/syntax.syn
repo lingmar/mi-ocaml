@@ -172,6 +172,10 @@ prod Matching : OExpr =
     arms:{"|" pat:OPat "->" body:OExpr}*
   "end"
 
+prefix Ref : OExpr = op:"ref"
+prefix Deref : OExpr = op:"!"
+infix Assign : OExpr = op:":="
+
 infix left Addi : OExpr = op:"+"
 infix left Addf : OExpr = op:"+."
 infix left Subi : OExpr = op:"-"
@@ -181,12 +185,12 @@ infix left Mulf : OExpr = op:"*."
 infix left Divi : OExpr = op:"/"
 infix left Divf : OExpr = op:"/."
 
-infix left Eq : OExpr = op:"="
-infix left Neq : OExpr = op:"!="
-infix left Lt : OExpr = op:"<"
-infix left Gt : OExpr = op:">"
-infix left Leq : OExpr = op:"<="
-infix left Geq : OExpr = op:">="
+infix Eq : OExpr = op:"="
+infix Neq : OExpr = op:"!="
+infix Lt : OExpr = op:"<"
+infix Gt : OExpr = op:">"
+infix Leq : OExpr = op:"<="
+infix Geq : OExpr = op:">="
 
 infix left Tup : OExpr = ","
 infix left App : OExpr = empty
@@ -195,7 +199,7 @@ infix right Semi : OExpr = ";"
 infix right Or : OExpr = "||"
 infix right And : OExpr = "&&"
 
--- TODO: add precedence
+-- Independence annotation for program holes
 infix left AnnIndep : OExpr = "independent_of"
 
 postfix Access : OExpr = "."
@@ -208,6 +212,8 @@ postfix Access : OExpr = "."
 -- clarification in some potentially confusing situations
 precedence {
   Access;
+  Deref;
+  Ref;
   App;
   Muli Mulf Divi Divf;
   Addi Addf Subi Subf;
@@ -218,6 +224,7 @@ precedence {
   If;
   Semi;
   AnnIndep;
+  Assign;
   Let Fun;
 } except {
   Muli Mulf ? Divi Divf;

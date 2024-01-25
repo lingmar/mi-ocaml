@@ -364,6 +364,28 @@ lang ConvertMatchingOExpr = ConvertOCamlToMExpr + MatchingOExprAst + LetAst
     }
 end
 
+lang ConvertRefOExpr = ConvertOCamlToMExpr + RefOExprAst + RefOpAst
+  sem convExpr =
+  | RefOExpr x -> withInfo x.info (appf1_
+    (withInfo x.op (uconst_ (CRef ())))
+    (convExpr x.right))
+end
+
+lang ConvertDerefOExpr = ConvertOCamlToMExpr + DerefOExprAst + RefOpAst
+  sem convExpr =
+  | DerefOExpr x -> withInfo x.info (appf1_
+    (withInfo x.op (uconst_ (CDeRef ())))
+    (convExpr x.right))
+end
+
+lang ConvertAssignOExpr = ConvertOCamlToMExpr + AssignOExprAst + RefOpAst
+  sem convExpr =
+  | AssignOExpr x -> withInfo x.info (appf2_
+    (withInfo x.op (uconst_ (CModRef ())))
+    (convExpr x.left)
+    (convExpr x.right))
+end
+
 lang ConvertAddiOExpr = ConvertOCamlToMExpr + AddiOExprAst + ArithIntAst
   sem convExpr =
   | AddiOExpr x -> withInfo x.info (appf2_
@@ -800,7 +822,7 @@ lang ComposedConvertOCamlToMExpr
   + ConvertAndOExpr
   + ConvertAnnIndepOExpr
   + ConvertAppOExpr
-  + ConvertHoleOExpr
+  + ConvertAssignOExpr
   + ConvertAppOPat
   + ConvertAppOType
   + ConvertArrayOExpr
@@ -815,8 +837,10 @@ lang ComposedConvertOCamlToMExpr
   + ConvertConOType
   + ConvertConsOExpr
   + ConvertConsOPat
+  + ConvertDerefOExpr
   + ConvertDivfOExpr
   + ConvertEqOExpr
+  + ConvertHoleOExpr
   + ConvertNeqOExpr
   + ConvertLtOExpr
   + ConvertGtOExpr
@@ -843,6 +867,7 @@ lang ComposedConvertOCamlToMExpr
   + ConvertOrOExpr
   + ConvertOrOPat
   + ConvertPatOParam
+  + ConvertRefOExpr
   + ConvertReprOTop
   + ConvertScaleBaseOExpr
   + ConvertSemiOExpr
