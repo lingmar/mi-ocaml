@@ -176,6 +176,10 @@ prod While : OExpr =
   "while" cond:OExpr "do"
      body:OExpr
   "done"
+prod For : OExpr =
+  "for" var:LName "=" startValue:OExpr (to:"to"|downto:"downto") endValue:OExpr "do"
+     body:OExpr
+  "done"
 
 prefix Ref : OExpr = op:"ref"
 prefix Deref : OExpr = op:"!"
@@ -226,10 +230,10 @@ precedence {
   Cons;
   ~Or And;
   Tup;
+  Assign;
   If;
   Semi;
   AnnIndep;
-  Assign;
   Let Fun;
 } except {
   Muli Mulf ? Divi Divf;

@@ -395,6 +395,36 @@ lang ConvertWhileOExpr = ConvertOCamlToMExpr + WhileOExprAst + RecLetsAst
     }
 end
 
+lang ConvertForOExpr = ConvertOCamlToMExpr + ForOExprAst + RecLetsAst + CmpIntAst
+  sem convExpr =
+  | ForOExpr x ->
+    let for = nameSym "for" in
+    let loopVar = x.var.v in
+    match
+      switch (x.to, x.downto)
+      case (Some _, _) then (CLeqi (), addi_)
+      case (_, Some _) then (CGeqi (), subi_)
+      end
+    with (cmpFun, nextFun) in
+    let b =
+    { ident = for
+    , tyAnnot = tyunknown_
+    , tyBody = tyunknown_
+    , body =
+      nulam_ loopVar (
+        if_ (appf2_ (uconst_ cmpFun) (nvar_ loopVar) (convExpr x.endValue))
+        (semi_ (convExpr x.body) (appf1_ (nvar_ for) (nextFun (nvar_ loopVar) (int_ 1))))
+        (uunit_))
+    , info = x.info
+    } in
+    TmRecLets
+    { bindings = [b]
+    , inexpr = appf1_ (nvar_ for) (convExpr x.startValue)
+    , ty = tyunknown_
+    , info = x.info
+    }
+end
+
 lang ConvertRefOExpr = ConvertOCamlToMExpr + RefOExprAst + RefOpAst
   sem convExpr =
   | RefOExpr x -> withInfo x.info (appf1_
@@ -877,6 +907,7 @@ lang ComposedConvertOCamlToMExpr
   + ConvertDerefOExpr
   + ConvertDivfOExpr
   + ConvertEqOExpr
+  + ConvertForOExpr
   + ConvertHoleOExpr
   + ConvertNeqOExpr
   + ConvertLtOExpr
