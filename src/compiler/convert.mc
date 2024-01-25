@@ -364,6 +364,37 @@ lang ConvertMatchingOExpr = ConvertOCamlToMExpr + MatchingOExprAst + LetAst
     }
 end
 
+lang ConvertWhileOExpr = ConvertOCamlToMExpr + WhileOExprAst + RecLetsAst
+  sem convExpr =
+  | WhileOExpr x ->
+    let while = nameSym "while" in
+    let u = nameSym "_" in
+
+    let cinfo = get_OExpr_info x.cond in
+    let binfo = get_OExpr_info x.body in
+
+    let condLam = withInfo cinfo (nulam_ u (convExpr x.cond)) in
+    let condApp = withInfo cinfo (appf1_ condLam uunit_) in
+    let bodyLam = withInfo binfo (nulam_ u (convExpr x.body)) in
+    let bodyApp = withInfo binfo (appf1_ bodyLam uunit_) in
+
+    let recBody = withInfo x.info (nulam_ u (withInfo cinfo (
+      if_ condApp (semi_ bodyApp (appf1_ (nvar_ while) uunit_)) uunit_)))
+    in
+    TmRecLets
+    { bindings =
+      [{ ident = while
+       , tyAnnot = tyunknown_
+       , tyBody = tyunknown_
+       , body = recBody
+       , info = x.info
+       }]
+    , inexpr = appf1_ (nvar_ while) uunit_
+    , ty = tyunknown_
+    , info = x.info
+    }
+end
+
 lang ConvertRefOExpr = ConvertOCamlToMExpr + RefOExprAst + RefOpAst
   sem convExpr =
   | RefOExpr x -> withInfo x.info (appf1_
@@ -897,6 +928,7 @@ lang ComposedConvertOCamlToMExpr
   + ConvertVarOExpr
   + ConvertVarOExpr
   + ConvertVarOType
+  + ConvertWhileOExpr
   + ConvertWildOPat
   + ConvertWildOType
 end

@@ -172,6 +172,11 @@ prod Matching : OExpr =
     arms:{"|" pat:OPat "->" body:OExpr}*
   "end"
 
+prod While : OExpr =
+  "while" cond:OExpr "do"
+     body:OExpr
+  "done"
+
 prefix Ref : OExpr = op:"ref"
 prefix Deref : OExpr = op:"!"
 infix Assign : OExpr = op:":="
