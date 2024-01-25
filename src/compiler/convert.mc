@@ -799,6 +799,12 @@ lang ConvertAppOType = ConvertOCamlToMExpr + AppOTypeAst + CommaOTypeAst + Opaqu
   | ty -> [convType ty]
 end
 
+lang ConvertRefOType = ConvertOCamlToMExpr + RefOTypeAst
+  sem convType =
+  | ty & RefOType x -> tyWithInfo x.info (tyref_ (convType x.left))
+
+end
+
 lang ConvertTupOType = ConvertOCamlToMExpr + TupOTypeAst
   sem convType =
   | ty & TupOType x -> tyWithInfo x.info (tytuple_ (tyTupList ty))
@@ -868,6 +874,7 @@ lang ComposedConvertOCamlToMExpr
   + ConvertOrOPat
   + ConvertPatOParam
   + ConvertRefOExpr
+  + ConvertRefOType
   + ConvertReprOTop
   + ConvertScaleBaseOExpr
   + ConvertSemiOExpr

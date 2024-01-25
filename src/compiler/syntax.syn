@@ -266,6 +266,7 @@ prod SubstOType : OType = "!" n:LName ("(" ty:OType ")")?
 
 postfix AppOType : OType =
   (modules:UName ".")* n:LName
+postfix RefOType : OType = "ref"
 
 infix left TupOType : OType = "*"
 infix left CommaOType : OType = ","
@@ -273,6 +274,7 @@ infix right ArrowOType : OType = "->"
 
 precedence {
   AppOType;
+  RefOType;
   TupOType;
   ArrowOType;
   CommaOType;
