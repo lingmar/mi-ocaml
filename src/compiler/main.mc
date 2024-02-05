@@ -248,7 +248,7 @@ let argConfig =
     )
   , ( [("--debug-full-anf", " ", "<path>")]
     , "Output an interactive (html) pprinted version of the AST just after full ANF transformatio."
-    , lam p. { p.options with debugAnf = Some (argToString p) }
+    , lam p. { p.options with debugFullAnf = Some (argToString p) }
     )
   , ( [("--debug-instrumentation", " ", "<path>")]
     , "Output an interactive (html) pprinted version of the AST just after instrumentation."
