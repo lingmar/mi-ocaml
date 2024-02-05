@@ -211,6 +211,8 @@ infix right And : OExpr = "&&"
 -- Independence annotation for program holes
 infix left AnnIndep : OExpr = "independent_of"
 
+infix ArraySet : OExpr = "<-"
+
 postfix Access : OExpr = "."
   ( field:LIdent
   | module:UName
@@ -232,6 +234,7 @@ precedence {
   Tup;
   Assign;
   If;
+  ArraySet;
   Semi;
   AnnIndep;
   Let Fun;

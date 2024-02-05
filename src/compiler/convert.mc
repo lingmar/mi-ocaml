@@ -609,6 +609,21 @@ lang ConvertAnnIndepOExpr = ConvertOCamlToMExpr + AnnIndepOExprAst + Independent
     }
 end
 
+lang ConvertArraySetOExpr = ConvertOCamlToMExpr + ArraySetOExprAst + AccessOExprAst + OpaqueOCamlAst
+  sem convExpr =
+  | ArraySetOExpr (x & {left = AccessOExpr (xx & {idx = Some idx, field = None _, module = None _})}) ->
+    withInfo x.info (appf3_ (
+      TmOpaqueOCaml
+      { info = x.info
+      , content = "Array.set"
+      , ty = tyunknown_
+      })
+      (convExpr xx.left)
+      (convExpr idx)
+      (convExpr x.right))
+  | ArraySetOExpr x -> errorSingle [get_OExpr_info x.left] "Expected an array access here"
+end
+
 lang ConvertAccessOExpr = ConvertOCamlToMExpr + AccessOExprAst + ConOExprAst + OpaqueOCamlAst
   sem convExpr =
   | tm & AccessOExpr (x & {module = Some _, field = None _, idx = None _}) ->
@@ -626,7 +641,14 @@ lang ConvertAccessOExpr = ConvertOCamlToMExpr + AccessOExprAst + ConOExprAst + O
     , ty = tyunknown_
     }
   | AccessOExpr (x & {idx = Some idx, field = None _, module = None _}) ->
-    never "array indexing"
+    withInfo x.info (appf2_ (
+      TmOpaqueOCaml
+      { info = x.info
+      , content = "Array.get"
+      , ty = tyunknown_
+      })
+      (convExpr x.left)
+      (convExpr idx))
 
   sem moduleChain =
   | ConOExpr x -> [x.n.v]
@@ -889,6 +911,7 @@ lang ComposedConvertOCamlToMExpr
   + ConvertAndOExpr
   + ConvertAnnIndepOExpr
   + ConvertAppOExpr
+  + ConvertArraySetOExpr
   + ConvertAssignOExpr
   + ConvertAppOPat
   + ConvertAppOType
