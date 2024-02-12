@@ -181,6 +181,9 @@ prod For : OExpr =
      body:OExpr
   "done"
 
+prefix Negi : OExpr = op:"~-"
+prefix Negf : OExpr = op:"~-."
+
 prefix Ref : OExpr = op:"ref"
 prefix Deref : OExpr = op:"!"
 infix Assign : OExpr = op:":="
@@ -224,12 +227,11 @@ postfix Access : OExpr = "."
 precedence {
   Access;
   Deref;
-  Ref;
-  App;
+  App Ref Negi Negf;
   Muli Mulf Divi Divf;
   Addi Addf Subi Subf;
-  Eq Neq Lt Gt Leq Geq;
   Cons;
+  Eq Neq Lt Gt Leq Geq;
   ~Or And;
   Tup;
   Assign;

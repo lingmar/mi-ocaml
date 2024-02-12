@@ -425,6 +425,20 @@ lang ConvertForOExpr = ConvertOCamlToMExpr + ForOExprAst + RecLetsAst + CmpIntAs
     }
 end
 
+lang ConvertNegiOExpr = ConvertOCamlToMExpr + NegiOExprAst + ArithIntAst
+  sem convExpr =
+  | NegiOExpr x -> withInfo x.info (appf1_
+    (withInfo x.op (uconst_ (CNegi ())))
+    (convExpr x.right))
+end
+
+lang ConvertNegfOExpr = ConvertOCamlToMExpr + NegfOExprAst + ArithFloatAst
+  sem convExpr =
+  | NegfOExpr x -> withInfo x.info (appf1_
+    (withInfo x.op (uconst_ (CNegf ())))
+    (convExpr x.right))
+end
+
 lang ConvertRefOExpr = ConvertOCamlToMExpr + RefOExprAst + RefOpAst
   sem convExpr =
   | RefOExpr x -> withInfo x.info (appf1_
@@ -953,6 +967,8 @@ lang ComposedConvertOCamlToMExpr
   + ConvertMulfOExpr
   + ConvertMuliOExpr
   + ConvertNameOParam
+  + ConvertNegfOExpr
+  + ConvertNegiOExpr
   + ConvertNumOExpr
   + ConvertNumOPat
   + ConvertOrOExpr
