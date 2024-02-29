@@ -132,6 +132,7 @@ let options =
   , debugMExpr = None ()
   , debugTypeCheck = None ()
   , debugDesugar = None ()
+  , debugPhases = false
   , debugRepr = None ()
   , debugAnalysis = None ()
   , debugColoring = None ()
@@ -178,6 +179,10 @@ let argConfig =
   , ( [("--debug-desugar", " ", "<path>")]
     , "Output an interactive (html) pprinted version of the AST just after desugaring."
     , lam p. { p.options with debugDesugar = Some (argToString p) }
+    )
+  , ( [("--debug-phases", "", "")]
+    , "Show debug and profiling information about each phase."
+    , lam p. { p.options with debugPhases = true }
     )
 
   -- Reptypes related options
@@ -298,25 +303,34 @@ with (options, mlFile) in
 
 costSetVar (nameNoSym "log") (uconst_ (CLogf ()));
 
+let log = mkPhaseLogState options.debugPhases in
+
 let parseOCamlExn : String -> String -> OFile = parseOCamlExn in
 match parseOCamlExn mlFile (readFile mlFile) with TopsOFile {tops = ast} in
 let ast = ocamlToMExpr ast in
-let ast = wrapInPrelude ast in
+endPhaseStats log "parsing" ast;
+let ast = wrapInPrelude ast i
+endPhaseStats log "wrap-in-prelude" ast;
 debugAst options.debugMExpr ast;
 
 let ast = symbolize ast in
+endPhaseStats log "symbolize" ast;
 let ast = typeCheckLeaveMeta ast in
+endPhaseStats log "type-check" ast;
 debugAst options.debugTypeCheck ast;
 
 let ast = desugarExpr ast in
+endPhaseStats log "desugar" ast;
 debugAst options.debugDesugar ast;
 
 let ast = generateUtest options.generateTests ast in
+endPhaseStats log "generate-utests" ast;
 
 let ast =
   if options.useRepr then
     let ast = use RepAnalysis in typeCheckLeaveMeta ast in
 
+    endPhaseStats log "repr-analysis" ast;
     debugAst options.debugAnalysis ast;
     (match options.jsonPath with Some jsonPath then
        dumpRepTypesProblem jsonPath ast
@@ -330,6 +344,7 @@ let ast =
       } in
     let ast = use MExprRepTypesComposedSolver in reprSolve reprOptions ast in
 
+    endPhaseStats log "repr-solve" ast;
     debugAst options.debugRepr ast;
     ast
   else ast
@@ -341,10 +356,13 @@ let ast =
       use MExprTuning in
       let table = tuneFileReadTable path in
       let ast = normalizeTerm ast in
+      endPhaseStats log "normalize" ast;
       debugAst options.debugAnf ast;
       match colorCallGraph [] ast with (env, ast) in
+      endPhaseStats log "color-call-graph" ast;
       debugAst options.debugColoring ast;
       let ast = stripTuneAnnotations ast in
+      endPhaseStats log "strip-tune-annotations" ast;
       insert env table ast
 
     else match options.outputTunedValues with Some path then
@@ -353,57 +371,80 @@ let ast =
         tuneOptionsDefault (optionMapOr "" readFile options.tuneOptions) in
 
       let ast = normalizeTerm ast in
+      endPhaseStats log "normalize" ast;
       debugAst options.debugAnf ast;
 
       match colorCallGraph [] ast with (env, cAst) in
-      debugAst options.debugColoring ast;
+      endPhaseStats log "color-call-graph" cAst;
+      debugAst options.debugColoring cAst;
 
       match
         if tuneOptions.dependencyAnalysis then
           let ast = use MExprTuneANFAll in normalizeTerm cAst in
+          endPhaseStats log "normalize-all" ast;
           let cfaRes = holeCfa (graphDataInit env) ast in
           let cfaRes = analyzeNested env cfaRes ast in
 
+          endPhaseStats log "cfa" ast;
           debugAst options.debugFullAnf ast;
           (if tuneOptions.debugDependencyAnalysis then
              let pprintEnv = (pprintCode 0 pprintEnvEmpty ast).0 in
              printLn (cfaGraphToString pprintEnv cfaRes).1
            else ());
-
-          (analyzeDependency env cfaRes ast, ast)
-        else assumeFullDependency env cAst
+          let dep = analyzeDependency env cfaRes ast in
+          endPhaseStats log "dependency-analysis" ast;
+          (dep, ast)
+        else
+          let res = assumeFullDependency env cAst in
+          endPhaseStats log "assume-full-dependency" cAst;
+          res
       with (dep, ast) in
 
       match instrument env dep ast with (instRes, ast) in
+      endPhaseStats log "instrument" ast;
       debugAst options.debugInstrumentation ast;
       match contextExpand env ast with (r, ast) in
+      endPhaseStats log "context-expand" ast;
       debugAst options.debugExpansion ast;
 
       let ast = stripTuneAnnotations ast in
+      endPhaseStats log "strip-tune-annotations" ast;
       let ast = typeCheck ast in
+      endPhaseStats log "type-check" ast;
       let ast = lowerAll ast in
+      endPhaseStats log "pattern-lowering" ast;
 
       let tuneBinary = sysJoinPath r.tempDir "tune" in
       compile options.olibs options.clibs ast tuneBinary;
+      endPhaseStats log "compile-tune-binary" ast;
 
       let result = tune tuneBinary tuneOptions env dep instRes r ast in
       tuneFileDumpTable path env result true;
+      endPhaseStats log "tuning" ast;
 
       r.cleanup();
       instRes.cleanup();
 
       let ast = insert env result cAst in
-      stripTuneAnnotations ast
+      endPhaseStats log "insert" ast;
+      let ast = stripTuneAnnotations ast in
+      endPhaseStats log "strip-tune-annotations" ast;
+      astn
 
     else
       let ast = stripTuneAnnotations ast in
-      default ast
+      endPhaseStats log "strip-tune-annotations" ast;
+      let ast = default ast in
+      endPhaseStats log "default" ast;
+      ast
 
   else ast
 in
 
 let ast = removeMetaVarExpr ast in
+endPhaseStats log "remove-meta-var" ast;
 let ast = lowerAll ast in
+endPhaseStats log "pattern-lowering" ast;
 
 match options.destinationFile with Some destinationFile in
 
