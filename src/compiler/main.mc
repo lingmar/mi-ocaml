@@ -309,7 +309,7 @@ let parseOCamlExn : String -> String -> OFile = parseOCamlExn in
 match parseOCamlExn mlFile (readFile mlFile) with TopsOFile {tops = ast} in
 let ast = ocamlToMExpr ast in
 endPhaseStats log "parsing" ast;
-let ast = wrapInPrelude ast i
+let ast = wrapInPrelude ast in
 endPhaseStats log "wrap-in-prelude" ast;
 debugAst options.debugMExpr ast;
 
@@ -429,7 +429,7 @@ let ast =
       endPhaseStats log "insert" ast;
       let ast = stripTuneAnnotations ast in
       endPhaseStats log "strip-tune-annotations" ast;
-      astn
+      ast
 
     else
       let ast = stripTuneAnnotations ast in
